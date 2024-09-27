@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 import glob
 import matplotlib.pyplot as plt
 import matplotlib.ticker as mtick
@@ -61,7 +62,6 @@ else:
     # agrupamos por mes y sumamos
     ventas_por_mes = datos_ventas.groupby('Mes')['Total_Ventas'].sum()
 
-    
     print("Ingreso total generado por mes:")
     print(ventas_por_mes)
 
@@ -71,13 +71,21 @@ else:
     plt.title('Ingresos por Ventas Mensuales')
     plt.xlabel('Mes')
     plt.ylabel('Ingresos Totales ($)')
-    
+
     # mostrar valores sin notación científica
     ax.yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.0f}'))
+
+    # Añadir etiquetas encima de cada barra
+    for i, v in enumerate(ventas_por_mes):
+        if v >= 1_000_000:
+            label = f'{v/1_000_000:.2f}M'
+        else:
+            label = f'{v/1_000:.1f}K'
+        ax.text(i, v, label, ha='center', va='bottom')
+
     plt.show()
 
     # 2. Optimización de la Publicidad y Patrón de Ventas por Hora
-
     ventas_por_hora = datos_ventas.groupby('Hora')['Total_Ventas'].sum()
 
     # grafico de barras de ventas por hora
@@ -100,8 +108,6 @@ else:
     plt.ylabel('Mes')
     plt.show()
 
-
-    
     # horas de mayor actividad
     horas_mayor_actividad = ventas_por_hora.nlargest(5).index
 
@@ -128,13 +134,9 @@ else:
     plt.show()
     plt.close(fig)
     
-    
-    #3 Distribución de Ventas por Ubicación
-    
+    # 3. Distribución de Ventas por Ubicación
     # agrupamos por ciudad
-    
     ventas_por_ciudad = datos_ventas.groupby('Ciudad')['Total_Ventas'].sum()
-
 
     print("Ventas por Ciudad:")
     print(ventas_por_ciudad)
@@ -146,6 +148,19 @@ else:
     plt.xlabel('Ciudad')
     plt.ylabel('Total de Ventas ($)')
     ax.yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.0f}'))
+
+    # Añadir etiquetas encima de cada barra
+    for i, v in enumerate(ventas_por_ciudad):
+        if v >= 1_000_000:
+            label = f'{v/1_000_000:.2f}M'
+        elif v >= 1_000:
+            label = f'{v/1_000:.1f}K'
+        else:
+            label = f'{v:.0f}'
+        ax.text(i, v, label, ha='center', va='bottom')
+
+    plt.xticks(rotation=45, ha='right')
+    plt.tight_layout()
     plt.show()
 
     # extraer el estado de la dirección de envío
@@ -158,22 +173,20 @@ else:
     print("Ventas por Estado:")
     print(ventas_por_estado)
 
-
-    # Nuevo código para el mapa coroplético
+    # mapa de ventas por estado
     ventas_por_estado_df = pd.DataFrame({'Estado': ventas_por_estado.index, 'Ventas totales ($)': ventas_por_estado.values})
 
     fig = px.choropleth(ventas_por_estado_df,
-                    locations='Estado', 
-                    locationmode="USA-states",
-                    color='Ventas totales ($)',
-                    scope="usa",
-                    color_continuous_scale="RdYlGn",
-                    title='Ventas Totales ($) por Estado')
+                        locations='Estado', 
+                        locationmode="USA-states",
+                        color='Ventas totales ($)',
+                        scope="usa",
+                        color_continuous_scale="RdYlGn",
+                        title='Ventas Totales ($) por Estado')
 
     fig.show()
-    
 
-    #4. Análisis del Producto Más Vendido
+    # 4. Análisis del Producto Más Vendido
     # agrupamos por producto para calcular la cantidad vendida
     cantidad_por_producto = datos_ventas.groupby('Producto')['Cantidad Pedida'].sum()
 
@@ -187,7 +200,7 @@ else:
     explode = [0.1 if i == producto_mas_vendido else 0 for i in cantidad_por_producto.index]  # Resaltar el producto más vendido
     cantidad_por_producto.plot(kind='pie', autopct='%1.1f%%', startangle=90, explode=explode, textprops={'fontsize': 10})
     plt.title('Distribución de Ventas por Cantidad de Producto')
-    plt.ylabel('')  # Ocultar la etiqueta del eje Y
+    plt.ylabel('')  # ocultar etiqueta del eje Y
     plt.show()
 
     # agrupamos por mes y producto para calcular la cantidad vendida
@@ -199,23 +212,26 @@ else:
     print(producto_mas_vendido_por_mes)
 
     # gráfico de calor de ventas por cantidad de producto a lo largo de los meses
-    plt.figure(figsize=(16, 10))  # aumentar el tamaño de la figura
-    sns.heatmap(cantidad_por_mes_producto, cmap='viridis', annot=False)
-    plt.title('Ventas por Cantidad de Producto a lo Largo de los Meses')
-    plt.xlabel('Producto')
-    plt.ylabel('Mes')
+    plt.figure(figsize=(20, 12))  # aumentar aún más el tamaño de la figura para acomodar los números
+    sns.heatmap(cantidad_por_mes_producto, 
+                cmap='viridis', 
+                annot=True,  # Esto agrega los números a cada celda
+                fmt='.0f',   # Formato de los números (sin decimales)
+                cbar_kws={'label': 'Cantidad de Productos Vendidos'},
+                linewidths=0.5)  # Añade líneas entre las celdas para mejor visibilidad
+    
+    plt.title('Ventas por Cantidad de Producto a lo Largo de los Meses', fontsize=16)
+    plt.xlabel('Producto', fontsize=12)
+    plt.ylabel('Mes', fontsize=12)
 
     # rotamos las etiquetas del eje x para que sean legibles
     plt.xticks(rotation=45, ha='right')
 
     # evitar que las etiquetas se corten
     plt.tight_layout()
-
     plt.show()
 
-
-
-    #5. Tendencia de Ventas
+    # 5. Tendencia de Ventas
     # agrupamos por día del mes
     ventas_por_dia_mes = datos_ventas.groupby(datos_ventas['Fecha de Pedido'].dt.day)['Cantidad Pedida'].sum()
 
@@ -270,9 +286,39 @@ else:
     plt.ylabel('Cantidad de Productos Vendidos')
     ax.set_xticklabels(['Laborable', 'Fin de Semana'], rotation=0)
     ax.yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.0f}'))
+    plt.tight_layout()  # Evitar que las etiquetas se corten
     plt.show()
 
-    #6. Análisis de Eventos Especiales
+    # calculamos el promedio diario de ventas
+    promedio_diario_laborable = ventas_por_tipo_dia[0] / 5  # 5 días laborables
+    promedio_diario_fin_de_semana = ventas_por_tipo_dia[1] / 2  # 2 días de fin de semana
+
+    # crear un df para los promedios
+    promedios_df = pd.DataFrame({
+        'Tipo de Día': ['Laborable', 'Fin de Semana'],
+        'Promedio Diario de Ventas': [promedio_diario_laborable, promedio_diario_fin_de_semana]
+    })
+
+    # Cerrar todas las figuras anteriores
+    plt.close('all')
+
+    # Gráfico de barras comparando el promedio diario de ventas
+    ax = promedios_df.plot(kind='bar', x='Tipo de Día', y='Promedio Diario de Ventas', legend=False, color=['blue', 'orange'])
+    plt.title('Promedio Diario de Ventas: Días Laborables vs. Fin de Semana')
+    plt.xlabel('Tipo de Día')
+    plt.ylabel('Promedio Diario de Ventas (Cantidad de Productos Vendidos)')
+    ax.yaxis.set_major_formatter(mtick.StrMethodFormatter('{x:,.0f}'))
+
+    # Añadir etiquetas encima de cada barra
+    for i in ax.containers:
+        ax.bar_label(i, label_type='edge', fmt='%.0f')
+
+    plt.tight_layout()  # Evitar que las etiquetas se corten
+    plt.show()
+
+
+
+    # 6. Análisis de Eventos Especiales
     # definir una lista de días festivos o eventos especiales
     eventos_especiales = [
         '2019-01-01',  # Año Nuevo
@@ -323,8 +369,6 @@ else:
     plt.ylabel('Total de Ventas')
     plt.legend()
     plt.show()
-    
-
 
     # agrupamos las ventas por producto y mes, pero ahora usando 'Cantidad Pedida'
     ventas_por_producto_mes = datos_ventas.groupby(['Producto', 'Mes'])['Cantidad Pedida'].sum().unstack()
@@ -334,12 +378,10 @@ else:
 
     # crecimiento promedio anual de cada producto
     crecimiento_promedio_anual = crecimiento_mensual.mean(axis=1)
-
+    
     # identificar el producto con mayor crecimiento promedio anual
     producto_mayor_crecimiento = crecimiento_promedio_anual.idxmax()
     crecimiento_mayor_producto = crecimiento_promedio_anual.max()
-    print(f"El producto con mayor crecimiento en cantidad vendida mes a mes es: {producto_mayor_crecimiento} con un crecimiento promedio de {crecimiento_mayor_producto:.2f}%")
-
     print("\nTop 5 productos por crecimiento promedio en cantidad vendida:")
     print(crecimiento_promedio_anual.nlargest(5))
 
